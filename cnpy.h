@@ -19,6 +19,12 @@
 #include<stdint.h>
 #include<numeric>
 
+#define CNPY_WITH_EIGEN
+
+#ifdef CNPY_WITH_EIGEN
+#include <Eigen/Dense>
+#endif
+
 namespace cnpy {
 
     struct NpyArray {
@@ -64,7 +70,6 @@ namespace cnpy {
 
     char BigEndianTest();
     char map_type(const std::type_info& t);
-    template<typename T> std::vector<char> create_npy_header(const std::vector<size_t>& shape);
     void parse_npy_header(FILE* fp,size_t& word_size, std::vector<size_t>& shape, bool& fortran_order);
     void parse_npy_header(unsigned char* buffer,size_t& word_size, std::vector<size_t>& shape, bool& fortran_order);
     void parse_zip_footer(FILE* fp, uint16_t& nrecs, size_t& global_header_size, size_t& global_header_offset);
@@ -84,8 +89,40 @@ namespace cnpy {
     template<> std::vector<char>& operator+=(std::vector<char>& lhs, const std::string rhs);
     template<> std::vector<char>& operator+=(std::vector<char>& lhs, const char* rhs);
 
+    template<typename T> std::vector<char> create_npy_header(const std::vector<size_t>& shape, char type=' ') {  
+        std::vector<char> dict;
+        dict += "{'descr': '";
+        dict += BigEndianTest();
+        if (type == ' ') {
+            type = map_type(typeid(T));
+        }
+        dict += type;
+        dict += std::to_string(sizeof(T));
+        dict += "', 'fortran_order': False, 'shape': (";
+        dict += std::to_string(shape[0]);
+        for(size_t i = 1;i < shape.size();i++) {
+            dict += ", ";
+            dict += std::to_string(shape[i]);
+        }
+        if(shape.size() == 1) dict += ",";
+        dict += "), }";
+        //pad with spaces so that preamble+dict is modulo 16 bytes. preamble is 10 bytes. dict needs to end with \n
+        int remainder = 16 - (10 + dict.size()) % 16;
+        dict.insert(dict.end(),remainder,' ');
+        dict.back() = '\n';
 
-    template<typename T> void npy_save(std::string fname, const T* data, const std::vector<size_t> shape, std::string mode = "w") {
+        std::vector<char> header;
+        header += (char) 0x93;
+        header += "NUMPY";
+        header += (char) 0x01; //major version of numpy format
+        header += (char) 0x00; //minor version of numpy format
+        header += (uint16_t) dict.size();
+        header.insert(header.end(),dict.begin(),dict.end());
+
+        return header;
+    }
+
+    template<typename T> void npy_save(std::string fname, const T* data, const std::vector<size_t> shape, std::string mode = "w", char type=' ') {
         FILE* fp = NULL;
         std::vector<size_t> true_data_shape; //if appending, the shape of existing + new data
 
@@ -120,7 +157,7 @@ namespace cnpy {
             true_data_shape = shape;
         }
 
-        std::vector<char> header = create_npy_header<T>(true_data_shape);
+        std::vector<char> header = create_npy_header<T>(true_data_shape, type);
         size_t nels = std::accumulate(shape.begin(),shape.end(),1,std::multiplies<size_t>());
 
         fseek(fp,0,SEEK_SET);
@@ -220,10 +257,10 @@ namespace cnpy {
         fclose(fp);
     }
 
-    template<typename T> void npy_save(std::string fname, const std::vector<T> data, std::string mode = "w") {
+    template<typename T> void npy_save(std::string fname, const std::vector<T> data, std::string mode = "w", char type=' ') {
         std::vector<size_t> shape;
         shape.push_back(data.size());
-        npy_save(fname, &data[0], shape, mode);
+        npy_save(fname, &data[0], shape, mode, type);
     }
 
     template<typename T> void npz_save(std::string zipname, std::string fname, const std::vector<T> data, std::string mode = "w") {
@@ -231,39 +268,25 @@ namespace cnpy {
         shape.push_back(data.size());
         npz_save(zipname, fname, &data[0], shape, mode);
     }
+    
 
-    template<typename T> std::vector<char> create_npy_header(const std::vector<size_t>& shape) {  
-
-        std::vector<char> dict;
-        dict += "{'descr': '";
-        dict += BigEndianTest();
-        dict += map_type(typeid(T));
-        dict += std::to_string(sizeof(T));
-        dict += "', 'fortran_order': False, 'shape': (";
-        dict += std::to_string(shape[0]);
-        for(size_t i = 1;i < shape.size();i++) {
-            dict += ", ";
-            dict += std::to_string(shape[i]);
+#ifdef CNPY_WITH_EIGEN
+    template<typename _Scalar, int _Rows, int _Cols, int _Options> 
+    void npy_save(const std::string& filename, const Eigen::Matrix<_Scalar, _Rows, _Cols, _Options>& matrix, char type=' '){
+        //check if the data in matrix is row major or column major
+        if(!matrix.IsRowMajor)
+        {
+            // std::cout<<"Matrix is column major"<<std::endl;
+            Eigen::Matrix<_Scalar,_Rows,_Cols, Eigen::RowMajor> matrix1 = matrix.transpose();
+            npy_save(filename, (const _Scalar*) matrix1.data(), {(size_t)matrix.rows(), (size_t)matrix.cols()}, "w", type);
         }
-        if(shape.size() == 1) dict += ",";
-        dict += "), }";
-        //pad with spaces so that preamble+dict is modulo 16 bytes. preamble is 10 bytes. dict needs to end with \n
-        int remainder = 16 - (10 + dict.size()) % 16;
-        dict.insert(dict.end(),remainder,' ');
-        dict.back() = '\n';
-
-        std::vector<char> header;
-        header += (char) 0x93;
-        header += "NUMPY";
-        header += (char) 0x01; //major version of numpy format
-        header += (char) 0x00; //minor version of numpy format
-        header += (uint16_t) dict.size();
-        header.insert(header.end(),dict.begin(),dict.end());
-
-        return header;
+        else
+        {
+            npy_save(filename, (const _Scalar*) matrix.data(), {(size_t)matrix.rows(), (size_t)matrix.cols()}, "w", type);
+        }
     }
 
-
+#endif
 }
 
 #endif

@@ -5,16 +5,19 @@ endif(COMMAND cmake_policy)
 
 project(CNPY)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 option(ENABLE_STATIC "Build static (.a) library" ON)
 
 find_package(ZLIB REQUIRED)
+find_package(Eigen3)
 
 include_directories(${ZLIB_INCLUDE_DIRS})
 
 add_library(cnpy SHARED "cnpy.cpp")
 target_link_libraries(cnpy ${ZLIB_LIBRARIES})
+include_directories(cnpy ${EIGEN3_INCLUDE_DIR})
+target_include_directories(cnpy PUBLIC ${EIGEN3_INCLUDE_DIR})
 install(TARGETS "cnpy" LIBRARY DESTINATION lib PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 if(ENABLE_STATIC)
@@ -28,3 +31,7 @@ install(FILES "mat2npz" "npy2mat" "npz2mat" DESTINATION bin PERMISSIONS OWNER_RE
 
 add_executable(example1 example1.cpp)
 target_link_libraries(example1 cnpy)
+
+add_executable(example2 example2.cpp)
+target_link_libraries(example2 cnpy)
+target_include_directories(example2 PUBLIC ${EIGEN3_INCLUDE_DIR})

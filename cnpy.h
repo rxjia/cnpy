@@ -277,7 +277,7 @@ namespace cnpy {
         if(!matrix.IsRowMajor)
         {
             // std::cout<<"Matrix is column major"<<std::endl;
-            Eigen::Matrix<_Scalar,_Rows,_Cols, Eigen::RowMajor> matrix1 = matrix.transpose();
+            Eigen::Matrix<_Scalar,_Rows,_Cols, Eigen::RowMajor> matrix1 = matrix;
             npy_save(filename, (const _Scalar*) matrix1.data(), {(size_t)matrix.rows(), (size_t)matrix.cols()}, "w", type);
         }
         else

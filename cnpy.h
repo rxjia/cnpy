@@ -271,13 +271,13 @@ namespace cnpy {
     
 
 #ifdef CNPY_WITH_EIGEN
-    template<typename _Scalar, int _Rows, int _Cols, int _Options> 
+    template<typename _Scalar, int _Rows, int _Cols, int _Options>
     void npy_save(const std::string& filename, const Eigen::Matrix<_Scalar, _Rows, _Cols, _Options>& matrix, char type=' '){
-        //check if the data in matrix is row major or column major
+		//check if the data in matrix is row major or column major
         if(!matrix.IsRowMajor)
         {
             // std::cout<<"Matrix is column major"<<std::endl;
-            Eigen::Matrix<_Scalar,_Rows,_Cols, Eigen::RowMajor> matrix1 = matrix;
+            Eigen::Matrix<_Scalar,-1,-1, Eigen::RowMajor> matrix1 = matrix;
             npy_save(filename, (const _Scalar*) matrix1.data(), {(size_t)matrix.rows(), (size_t)matrix.cols()}, "w", type);
         }
         else
@@ -285,6 +285,20 @@ namespace cnpy {
             npy_save(filename, (const _Scalar*) matrix.data(), {(size_t)matrix.rows(), (size_t)matrix.cols()}, "w", type);
         }
     }
+
+	// template<typename Derived>
+	// void npy_save(const std::string& filename, const Eigen::Matrix<Derived>& matrix, char type=' '){
+	// 	//check if the data in matrix is row major or column major
+	// 	if(!Derived::IsRowMajor)
+	// 	{
+	// 		Eigen::Matrix<typename Derived::Scalar, -1,-1, Eigen::RowMajor> matrix1 = matrix;
+	// 		npy_save(filename, matrix1.data(), {(size_t)matrix.rows(), (size_t)matrix.cols()}, "w", type);
+	// 	}
+	// 	else
+	// 	{
+	// 		npy_save(filename, matrix.data(), {(size_t)matrix.rows(), (size_t)matrix.cols()}, "w", type);
+	// 	}
+	// }
 
 #endif
 }

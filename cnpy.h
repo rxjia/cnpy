@@ -286,6 +286,20 @@ namespace cnpy {
         }
     }
 
+	template<typename _Scalar>
+	Eigen::Matrix<_Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> npy_load_to_eig(const std::string& fname){
+		cnpy::NpyArray npy_arr = cnpy::npy_load(fname);
+		assert(sizeof(_Scalar)*npy_arr.num_vals == npy_arr.num_bytes());
+
+		Eigen::Matrix<_Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> eig_from_np(
+			std::max((int)npy_arr.shape[0],1), std::max((int)npy_arr.shape[1],1));
+
+		// spdlog::info("load {} , shape: {}, {}, num_bytes: {}", fname, npy_arr.shape[0], npy_arr.shape[1], npy_arr.num_bytes());
+		// spdlog::info("   eig: {},{},   size: {}", eig_from_np.rows(), eig_from_np.cols(), eig_from_np.size());
+		memcpy(eig_from_np.data(), npy_arr.data<float>(), npy_arr.num_bytes());
+		return eig_from_np;
+	}
+
 	// template<typename Derived>
 	// void npy_save(const std::string& filename, const Eigen::Matrix<Derived>& matrix, char type=' '){
 	// 	//check if the data in matrix is row major or column major

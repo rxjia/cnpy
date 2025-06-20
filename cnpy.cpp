@@ -229,7 +229,7 @@ NpyArray load_the_npz_array(FILE* fp, uint32_t compr_bytes, uint32_t uncompr_byt
     return array;
 }
 
-npz_t npz_load(std::string fname) {
+npz_t npz_load(const std::string& fname) {
     FILE* fp = fopen(fname.c_str(),"rb");
 
     if(!fp) {
@@ -278,7 +278,7 @@ npz_t npz_load(std::string fname) {
     return arrays;  
 }
 
-NpyArray npz_load(std::string fname, std::string varname) {
+NpyArray npz_load(const std::string& fname, const std::string& varname) {
     FILE* fp = fopen(fname.c_str(),"rb");
 
     if(!fp) throw std::runtime_error("npz_load: Unable to open file "+fname);
@@ -326,7 +326,7 @@ NpyArray npz_load(std::string fname, std::string varname) {
     throw std::runtime_error("npz_load: Variable name "+varname+" not found in "+fname);
 }
 
-NpyArray npy_load(std::string fname) {
+NpyArray npy_load(const std::string& fname) {
 
     FILE* fp = fopen(fname.c_str(), "rb");
 

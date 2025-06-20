@@ -5,21 +5,23 @@
 #ifndef LIBCNPY_H_
 #define LIBCNPY_H_
 
-#include<string>
-#include<stdexcept>
-#include<sstream>
-#include<vector>
-#include<cstdio>
-#include<typeinfo>
-#include<iostream>
-#include<cassert>
-#include<zlib.h>
-#include<map>
-#include<memory>
-#include<cstdint>
-#include<numeric>
+#include <string>
+#include <stdexcept>
+#include <sstream>
+#include <vector>
+#include <cstdio>
+#include <typeinfo>
+#include <iostream>
+#include <cassert>
+#include <zlib.h>
+#include <map>
+#include <memory>
+#include <cstdint>
+#include <numeric>
 
-#define CNPY_WITH_EIGEN
+#if __has_include(<Eigen/Dense>)
+    #define CNPY_WITH_EIGEN
+#endif
 
 #ifdef CNPY_WITH_EIGEN
 #include <Eigen/Dense>
